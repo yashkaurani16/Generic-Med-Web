@@ -17,9 +17,13 @@ import {
   ExternalLink,
   Store,
   AlertTriangle,
+  LineChart as LucideLineChart,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Medicine, MedicinePack, SellerOffer } from '../types';
+import { HistoricalPriceTrendChart } from './HistoricalPriceTrendChart';
 
 export const MedicineComparisonView: React.FC = () => {
   const {
@@ -50,6 +54,7 @@ export const MedicineComparisonView: React.FC = () => {
   });
 
   const [explainCalculationOpen, setExplainCalculationOpen] = useState(false);
+  const [showPriceTrends, setShowPriceTrends] = useState(true);
 
   // Filter medicines
   const filteredMedicines = useMemo(() => {
@@ -107,6 +112,20 @@ export const MedicineComparisonView: React.FC = () => {
             >
               <Upload className="h-4 w-4" />
               <span>Upload Prescription for Auto-Match</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowPriceTrends(!showPriceTrends);
+                if (!showPriceTrends) {
+                  setTimeout(() => {
+                    document.getElementById('historical-price-trends-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 80);
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white px-4 py-2.5 text-xs sm:text-sm font-semibold border border-emerald-500/40 shadow-sm transition-all"
+            >
+              <LucideLineChart className="h-4 w-4 text-emerald-200" />
+              <span>{showPriceTrends ? 'Price Trends Chart Active' : 'Historical Price Trends & Market Rate'}</span>
             </button>
             <button
               onClick={() => setExplainCalculationOpen(!explainCalculationOpen)}
@@ -276,11 +295,34 @@ export const MedicineComparisonView: React.FC = () => {
         </div>
       </div>
 
+      {/* Historical Price Trends & Market Rate Intelligence (Recharts) */}
+      {showPriceTrends && (
+        <HistoricalPriceTrendChart
+          onSelectMedicine={(medId) => {
+            const cardEl = document.getElementById(`medicine-card-${medId}`);
+            if (cardEl) {
+              cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }}
+        />
+      )}
+
       {/* Results Header */}
-      <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 pt-2">
-        <span>
-          Showing <strong>{filteredMedicines.length}</strong> standardized medicine formulations with real-time pharmacy offers
-        </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 pt-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span>
+            Showing <strong>{filteredMedicines.length}</strong> standardized medicine formulations with real-time pharmacy offers
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowPriceTrends(!showPriceTrends)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold text-[11px] transition"
+          >
+            <LucideLineChart className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>{showPriceTrends ? 'Hide Price Trends Chart' : 'Show Price Trends Chart'}</span>
+            {showPriceTrends ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </button>
+        </div>
         <span className="hidden sm:inline">
           Prices updated in real-time under genericMed Freshness SLA
         </span>
@@ -376,6 +418,20 @@ export const MedicineComparisonView: React.FC = () => {
                       <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">
                         Save {Math.round(((lowestOffer.mrp - lowestOffer.price) / lowestOffer.mrp) * 100)}% via {lowestOffer.pharmacyName}
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedMedicineId(med.id);
+                          setShowPriceTrends(true);
+                          setTimeout(() => {
+                            document.getElementById('historical-price-trends-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 50);
+                        }}
+                        className="mt-2.5 inline-flex items-center justify-center gap-1.5 w-full px-2.5 py-1.5 rounded-lg bg-emerald-100/90 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:hover:bg-emerald-900/80 text-emerald-900 dark:text-emerald-200 text-[11px] font-bold transition shadow-2xs"
+                      >
+                        <LucideLineChart className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                        <span>View Price Trend & Market Rate</span>
+                      </button>
                     </div>
                   ) : (
                     <div className="text-xs text-zinc-400 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800">

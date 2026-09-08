@@ -1,5 +1,20 @@
 export type UserRole = 'patient' | 'pharmacy' | 'admin' | 'doctor';
 
+export interface UserAccount {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  phone?: string;
+  licenseNumber?: string;
+  clinicHospital?: string;
+  pharmacyId?: string;
+  pharmacyName?: string;
+  address?: string;
+  avatarUrl?: string;
+  createdAt: string;
+}
+
 export interface MedicinePack {
   packId: string;
   packQuantity: number;

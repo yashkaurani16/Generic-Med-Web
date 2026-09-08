@@ -14,6 +14,7 @@ import { PharmacyPortalView } from './components/PharmacyPortalView';
 import { AdminDashboardView } from './components/AdminDashboardView';
 import { DoctorPrescribeView } from './components/DoctorPrescribeView';
 import { ArchitectureView } from './components/ArchitectureView';
+import { AuthView } from './components/AuthView';
 import { CartCheckoutDrawer } from './components/CartCheckoutDrawer';
 import { ToastContainer } from './components/ToastContainer';
 import { useTheme } from './hooks/useTheme';
@@ -43,6 +44,10 @@ function AppContent() {
         return <DoctorPrescribeView />;
       case 'architecture':
         return <ArchitectureView />;
+      case 'login':
+        return <AuthView initialMode="login" />;
+      case 'register':
+        return <AuthView initialMode="register" />;
       default:
         return <MedicineComparisonView />;
     }

@@ -11,6 +11,7 @@ import {
   PrescriptionStatus,
   OrderStatus,
   PharmacyPartner,
+  UserAccount,
 } from '../types';
 import {
   INITIAL_MEDICINES,
@@ -20,6 +21,7 @@ import {
   INITIAL_ORDERS,
   INITIAL_AUDIT_LOGS,
   INITIAL_TICKETS,
+  INITIAL_USERS,
 } from '../data/mockData';
 
 interface Toast {
@@ -30,6 +32,24 @@ interface Toast {
 }
 
 interface AppContextType {
+  // Authentication & User Accounts
+  currentUser: UserAccount | null;
+  users: UserAccount[];
+  login: (email: string, password?: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
+  register: (accountData: {
+    name: string;
+    email: string;
+    password?: string;
+    role: UserRole;
+    phone?: string;
+    licenseNumber?: string;
+    clinicHospital?: string;
+    pharmacyId?: string;
+    address?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  switchAccount: (userId: string) => void;
+
   // Role & Tenant
   currentRole: UserRole;
   setCurrentRole: (role: UserRole) => void;
@@ -133,6 +153,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeTab, setActiveTab] = useState<string>('compare');
   const [selectedMedicineId, setSelectedMedicineId] = useState<string | null>('med-1');
 
+  // Authentication State
+  const [users, setUsers] = useState<UserAccount[]>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('genericmed_users') : null;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // fallback
+      }
+    }
+    return INITIAL_USERS;
+  });
+
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('genericmed_current_user') : null;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // fallback
+      }
+    }
+    return INITIAL_USERS[0]; // Default logged-in patient
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('genericmed_users', JSON.stringify(users));
+    } catch (e) {
+      // ignore
+    }
+  }, [users]);
+
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        localStorage.setItem('genericmed_current_user', JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem('genericmed_current_user');
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [currentUser]);
+
   // Search and filter state for Medicine Comparison View
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedTherapeutic, setSelectedTherapeutic] = useState<string>('all');
@@ -219,6 +284,155 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       correlationId: `req-${Math.random().toString(36).substring(2, 9)}`,
     };
     setAuditLogs((prev) => [newRecord, ...prev]);
+  };
+
+  // Authentication Handlers
+  const login = async (email: string, _password?: string, preferredRole?: UserRole): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      return { success: false, error: 'Please provide your email address.' };
+    }
+
+    const existing = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      setCurrentUser(existing);
+      setCurrentRole(existing.role);
+      if (existing.pharmacyId) {
+        setActivePharmacyId(existing.pharmacyId);
+      }
+      addAuditLog({
+        actor: existing.name,
+        role: existing.role === 'pharmacy' ? 'Pharmacy Partner' : existing.role === 'admin' ? 'Admin / Operations' : existing.role === 'doctor' ? 'Doctor / Prescriber' : 'Patient / Consumer',
+        action: 'USER_LOGIN_SUCCESS',
+        target: existing.email,
+        source: 'Web UI',
+        reason: 'User authenticated successfully.',
+      });
+      showToast('success', `Welcome back, ${existing.name}!`, `Authenticated as ${existing.role.toUpperCase()}`);
+      return { success: true };
+    }
+
+    // If new email submitted during login, auto-provision account gracefully
+    const namePart = cleanEmail.split('@')[0].replace(/[._]/g, ' ');
+    const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    const role: UserRole = preferredRole || 'patient';
+    const newUser: UserAccount = {
+      id: `usr-${Date.now().toString(36)}`,
+      name: formattedName || 'Verified Member',
+      email: cleanEmail,
+      role,
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+
+    setUsers((prev) => [newUser, ...prev]);
+    setCurrentUser(newUser);
+    setCurrentRole(role);
+    addAuditLog({
+      actor: newUser.name,
+      role: role === 'pharmacy' ? 'Pharmacy Partner' : role === 'admin' ? 'Admin / Operations' : role === 'doctor' ? 'Doctor / Prescriber' : 'Patient / Consumer',
+      action: 'USER_PROVISION_LOGIN',
+      target: newUser.email,
+      source: 'Web UI',
+      reason: 'Instant verification credential issue.',
+    });
+    showToast('success', `Welcome to genericMed, ${newUser.name}!`, `Account created as ${role.toUpperCase()}`);
+    return { success: true };
+  };
+
+  const register = async (accountData: {
+    name: string;
+    email: string;
+    password?: string;
+    role: UserRole;
+    phone?: string;
+    licenseNumber?: string;
+    clinicHospital?: string;
+    pharmacyId?: string;
+    address?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmail = accountData.email.trim().toLowerCase();
+    const cleanName = accountData.name.trim();
+
+    if (!cleanName) {
+      return { success: false, error: 'Full name is required.' };
+    }
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return { success: false, error: 'A valid email address is required.' };
+    }
+
+    const existing = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      return {
+        success: false,
+        error: 'An account with this email already exists. Please sign in instead.',
+      };
+    }
+
+    let pharmacyName: string | undefined;
+    if (accountData.pharmacyId) {
+      const p = pharmacies.find((ph) => ph.id === accountData.pharmacyId);
+      if (p) pharmacyName = p.name;
+    }
+
+    const newUser: UserAccount = {
+      id: `usr-${Date.now().toString(36)}`,
+      name: cleanName,
+      email: cleanEmail,
+      role: accountData.role,
+      phone: accountData.phone,
+      licenseNumber: accountData.licenseNumber,
+      clinicHospital: accountData.clinicHospital,
+      pharmacyId: accountData.pharmacyId,
+      pharmacyName,
+      address: accountData.address,
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+
+    setUsers((prev) => [newUser, ...prev]);
+    setCurrentUser(newUser);
+    setCurrentRole(newUser.role);
+    if (newUser.pharmacyId) {
+      setActivePharmacyId(newUser.pharmacyId);
+    }
+
+    addAuditLog({
+      actor: newUser.name,
+      role: newUser.role === 'pharmacy' ? 'Pharmacy Partner' : newUser.role === 'admin' ? 'Admin / Operations' : newUser.role === 'doctor' ? 'Doctor / Prescriber' : 'Patient / Consumer',
+      action: 'USER_REGISTER_SUCCESS',
+      target: newUser.email,
+      source: 'Web UI',
+      reason: `New ${newUser.role} profile registered and verified.`,
+    });
+
+    showToast('success', `Account Created!`, `Welcome to genericMed, ${newUser.name}.`);
+    return { success: true };
+  };
+
+  const logout = () => {
+    if (currentUser) {
+      addAuditLog({
+        actor: currentUser.name,
+        role: currentUser.role === 'pharmacy' ? 'Pharmacy Partner' : currentUser.role === 'admin' ? 'Admin / Operations' : currentUser.role === 'doctor' ? 'Doctor / Prescriber' : 'Patient / Consumer',
+        action: 'USER_LOGOUT',
+        target: currentUser.email,
+        source: 'Web UI',
+        reason: 'User initiated session sign out.',
+      });
+    }
+    setCurrentUser(null);
+    showToast('info', 'Signed Out', 'You have been safely signed out.');
+  };
+
+  const switchAccount = (userId: string) => {
+    const target = users.find((u) => u.id === userId);
+    if (target) {
+      setCurrentUser(target);
+      setCurrentRole(target.role);
+      if (target.pharmacyId) {
+        setActivePharmacyId(target.pharmacyId);
+      }
+      showToast('info', `Switched Account`, `Now active as ${target.name} (${target.role.toUpperCase()})`);
+    }
   };
 
   // Helper to find current pharmacy partner
@@ -664,6 +878,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        currentUser,
+        users,
+        login,
+        register,
+        logout,
+        switchAccount,
         currentRole,
         setCurrentRole,
         activePharmacyId,

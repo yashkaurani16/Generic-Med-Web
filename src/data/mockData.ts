@@ -6,6 +6,7 @@ import {
   Order,
   AuditRecord,
   SupportTicket,
+  UserAccount,
 } from '../types';
 
 export const INITIAL_PHARMACIES: PharmacyPartner[] = [
@@ -1031,5 +1032,47 @@ export const INITIAL_TICKETS: SupportTicket[] = [
         timestamp: '2026-09-07 12:50 PM',
       },
     ],
+  },
+];
+
+export const INITIAL_USERS: UserAccount[] = [
+  {
+    id: 'usr-patient-1',
+    name: 'Yash Kaurani',
+    email: 'yashkaurani@gmail.com',
+    role: 'patient',
+    phone: '+1 (555) 234-8901',
+    address: '42 Blossom Boulevard, Apt 4B, Metro District',
+    createdAt: '2026-01-15',
+  },
+  {
+    id: 'usr-pharmacy-1',
+    name: 'CarePoint Dispensing Manager',
+    email: 'carepoint.ops@healthway.com',
+    role: 'pharmacy',
+    phone: '+1 (555) 987-1234',
+    licenseNumber: 'DL-KA-2024-88412',
+    pharmacyId: 'pharma-1',
+    pharmacyName: 'CarePoint Pharmacy',
+    address: '42 Healthway Avenue, Metro Central',
+    createdAt: '2026-02-01',
+  },
+  {
+    id: 'usr-doctor-1',
+    name: 'Dr. Priya Sharma, MD',
+    email: 'dr.priya.sharma@medcenter.org',
+    role: 'doctor',
+    phone: '+1 (555) 456-7890',
+    licenseNumber: 'MCI-REG-2018-9941',
+    clinicHospital: 'Apex Memorial Healthcare Center',
+    createdAt: '2026-02-20',
+  },
+  {
+    id: 'usr-admin-1',
+    name: 'Marcus Vance',
+    email: 'marcus.vance@genericmed.io',
+    role: 'admin',
+    phone: '+1 (555) 321-6540',
+    createdAt: '2025-11-10',
   },
 ];

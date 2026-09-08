@@ -1,0 +1,6 @@
+{
+  "name": "genericMed",
+  "description": "Price comparison and prescription-aware medicine purchasing platform with multi-tenant pharmacy fulfillment, pack equivalence normalization, and auditable workflows.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

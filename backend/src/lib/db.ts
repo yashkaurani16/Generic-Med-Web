@@ -3,8 +3,6 @@ import { PrismaClient } from '@prisma/client';
 declare global {
   // eslint-disable-next-line no-var
   var __prisma: PrismaClient | undefined;
-  // eslint-disable-next-line no-var
-  var __dbConnected: boolean | undefined;
 }
 
 const rawPrisma: PrismaClient =
@@ -20,18 +18,16 @@ if (process.env.NODE_ENV !== 'production') {
   global.__prisma = rawPrisma;
 }
 
-let isDbConnected: boolean = global.__dbConnected ?? false;
-let isChecked = false;
+// Default to false until explicitly verified by checkDatabaseConnection
+let isDbConnected = false;
 
 /**
  * Probe DB connectivity with a fast timeout (2.5s default).
  * Prevents Prisma from stalling requests for 30s when MongoDB Atlas IP is not whitelisted.
  */
 export async function checkDatabaseConnection(timeoutMs = 2500): Promise<boolean> {
-  if (isChecked) return isDbConnected;
   if (!process.env.DATABASE_URL) {
     isDbConnected = false;
-    isChecked = true;
     return false;
   }
   try {
@@ -42,13 +38,11 @@ export async function checkDatabaseConnection(timeoutMs = 2500): Promise<boolean
       ),
     ]);
     isDbConnected = true;
+    return true;
   } catch {
     isDbConnected = false;
-  } finally {
-    isChecked = true;
-    global.__dbConnected = isDbConnected;
+    return false;
   }
-  return isDbConnected;
 }
 
 export function isDatabaseReady(): boolean {
@@ -56,15 +50,16 @@ export function isDatabaseReady(): boolean {
 }
 
 /**
- * Proxied DB client: if DB is unreachable/offline, queries fail fast immediately (0ms)
- * allowing all endpoints to instantly fallback to in-memory mock datasets without hanging.
+ * Proxied DB client: if DB is not verified connected, queries fail fast immediately (0ms)
+ * so every API endpoint instantly falls back to mock data without stalling or throwing unhandled errors.
  */
 export const db: PrismaClient = new Proxy(rawPrisma, {
   get(target, prop, receiver) {
     if (typeof prop === 'string' && (prop.startsWith('$') || prop === 'then')) {
       return Reflect.get(target, prop, receiver);
     }
-    if (isChecked && !isDbConnected) {
+    // If database connection is not confirmed, fail immediately with zero latency
+    if (!isDbConnected) {
       return new Proxy({}, {
         get() {
           return () => Promise.reject(new Error('Database offline; fast fallback'));

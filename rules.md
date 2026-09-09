@@ -68,26 +68,69 @@
 Generic-Med-Web/
 ├── index.html                  # SPA entry point
 ├── server.ts                   # Express backend (API + Vite middleware)
-├── vite.config.ts              # Vite build configuration
+├── vite.config.ts              # Vite build configuration (Tailwind, PWA)
 ├── tsconfig.json               # TypeScript configuration
 ├── package.json                # Dependencies and scripts
 ├── metadata.json               # Project metadata for AI Studio
+├── Dockerfile                  # Multi-stage production container build
+├── docker-compose.yml          # Multi-container orchestration (app, postgres, redis)
+├── .dockerignore               # Docker build exclusions
 ├── .env.example                # Environment variable template
 ├── .gitignore                  # Git ignore rules
 ├── decisions.md                # ← Technical decision log
 ├── rules.md                    # ← This file (project rules)
 ├── memory.md                   # ← Long-term project memory
 ├── changelog.md                # ← Chronological change history
-├── public/                     # Static assets served as-is
+├── phases.md                   # ← Development phases tracking
+├── prisma/                     # Database schema & migrations
+│   ├── schema.prisma           # PostgreSQL Prisma schema
+│   └── seed.ts                 # Database seed script
+├── public/                     # Static assets, PWA manifest, Service Worker
+│   ├── manifest.json           # Web App Manifest
+│   ├── sw.js                   # Custom Service Worker
+│   └── icon.svg, icon-*.png    # PWA App icons
 └── src/
-    ├── main.tsx                # React app bootstrap
+    ├── main.tsx                # React app bootstrap & analytics init
     ├── App.tsx                 # Root component with view routing
     ├── index.css               # Global CSS / Tailwind entry
     ├── types.ts                # All TypeScript interfaces & types
+    ├── api/                    # Modular Express HTTP routers
+    │   ├── index.ts            # Central router mounting all routes
+    │   ├── auth.ts             # Auth & session endpoints
+    │   ├── medicines.ts        # Medicine catalog endpoints
+    │   ├── offers.ts           # Pharmacy seller offers
+    │   ├── prescriptions.ts    # Prescription upload, AI OCR, review
+    │   ├── orders.ts           # Order creation & fulfillment
+    │   ├── users.ts            # User profile endpoints
+    │   ├── audit.ts            # Audit logging queries
+    │   ├── tickets.ts          # Customer support tickets
+    │   ├── payments.ts         # Razorpay & Stripe integration
+    │   ├── pharmacies.ts       # Pharmacy directory & ratings
+    │   ├── interactions.ts     # Clinical drug interaction checker
+    │   ├── medical-history.ts  # Patient medical timeline
+    │   ├── bulk-upload.ts      # CSV batch inventory upload
+    │   ├── analytics.ts        # Admin business intelligence
+    │   ├── emails.ts           # Email test endpoints
+    │   ├── settlements.ts      # Marketplace commissions & escrow
+    │   ├── logistics.ts        # 3PL shipping rates & live tracking
+    │   ├── compliance.ts       # DISHA/HIPAA reports & data erasure
+    │   └── middleware/         # Gateway, Auth, RBAC, validate, rateLimit, error
+    ├── services/               # Decoupled domain service layer
+    │   ├── catalogService.ts   # Search, pack normalization, promoted rank
+    │   ├── orderService.ts     # Order state machine, returns, escrow
+    │   ├── marketplaceService.ts # Tiered commissions & settlement ledger
+    │   ├── logisticsService.ts # 3PL multi-carrier & live GPS simulation
+    │   └── complianceService.ts # DISHA/HIPAA reports & data erasure
     ├── components/             # React UI components (one per file)
-    │   ├── Header.tsx
+    │   ├── Header.tsx          # App header with language selector
     │   ├── Footer.tsx
     │   ├── MedicineComparisonView.tsx
+    │   ├── SearchAutocomplete.tsx
+    │   ├── DrugInteractionChecker.tsx
+    │   ├── MedicalHistoryView.tsx
+    │   ├── PharmacyProfileView.tsx
+    │   ├── BulkPriceUpload.tsx
+    │   ├── DeliveryTrackingModal.tsx # Real-time driver GPS tracking modal
     │   ├── PrescriptionUploadView.tsx
     │   ├── AIPrescriptionScanner.tsx
     │   ├── OrderTrackingView.tsx
@@ -102,26 +145,44 @@ Generic-Med-Web/
     │   ├── ThemeToggle.tsx
     │   └── ToastContainer.tsx
     ├── context/                # React context providers
-    │   └── AppContext.tsx
-    ├── data/                   # Mock / seed data
-    │   ├── mockData.ts
-    │   └── priceHistoryData.ts
+    │   └── AppContext.tsx      # Main application state & API wiring
     ├── hooks/                  # Custom React hooks
-    │   └── useTheme.ts
-    └── utils/                  # Utility / helper modules
-        ├── pdfGenerator.ts
-        └── prescriptionMatcher.ts
+    │   ├── useTheme.ts
+    │   └── useApi.ts           # Generic typed API query hook
+    ├── lib/                    # Shared client & server libraries
+    │   ├── db.ts               # Prisma singleton client
+    │   ├── email.ts            # Resend email templates & dispatcher
+    │   ├── analytics.ts        # PostHog analytics wrapper
+    │   ├── logger.ts           # Centralized structured JSON logger
+    │   ├── eventBus.ts         # Asynchronous domain event bus
+    │   ├── logistics.ts        # 3PL carrier definitions & coordinates
+    │   └── compliance.ts       # Healthcare compliance interfaces
+    ├── i18n/                   # Multi-language localization
+    │   ├── index.ts            # i18next configuration
+    │   └── locales/            # Language dictionaries (en, hi, ta, te)
+    ├── utils/                  # Utility / helper modules
+    │   ├── pdfGenerator.ts
+    │   └── prescriptionMatcher.ts
+    └── __tests__/              # Automated test suites
+        ├── setup.ts
+        ├── utils/
+        └── api/
 ```
 
 ### Rules
 
 - **Components:** All React components go in `src/components/`. One component per file.
+- **Services:** Pure domain logic lives in `src/services/` (`*Service.ts`). Controllers must delegate heavy business rules to services.
+- **Event Bus:** Asynchronous domain events are published via `eventBus` (`src/lib/eventBus.ts`). Do not block API requests with slow side effects.
 - **Types:** All shared TypeScript interfaces and types go in `src/types.ts`. Component-local types can stay in the component file.
 - **Context:** All context providers go in `src/context/`. Do not scatter contexts across random directories.
-- **Hooks:** All custom hooks go in `src/hooks/`. Hook files must start with `use` (e.g., `useTheme.ts`).
+- **Hooks:** All custom hooks go in `src/hooks/`. Hook files must start with `use` (e.g., `useTheme.ts`, `useApi.ts`).
 - **Utils:** All utility/helper functions go in `src/utils/`. No business logic in utils — only pure helper functions.
-- **Data:** All mock/seed data goes in `src/data/`. When a real database is introduced, this directory will be phased out.
-- **Server:** All backend API logic stays in `server.ts` (root level). When endpoints grow beyond 3-4, split into `src/api/` modules.
+- **Libraries:** Shared infrastructure adapters (DB client, email, analytics, logger, eventBus) go in `src/lib/`.
+- **API Routers:** Server routes go in `src/api/` and mount through `src/api/index.ts`.
+- **Localization:** Translation bundles go in `src/i18n/locales/<lang>/common.json`.
+- **Database:** Prisma schema and seed scripts live in `prisma/`.
+- **Containers:** Multi-stage builds in `Dockerfile`, services orchestration in `docker-compose.yml`.
 - **Do not create** new top-level directories without documenting in `decisions.md`.
 
 ---
@@ -277,14 +338,25 @@ refactor(server): extract prescription analysis into separate module
 
 ### Current Variables
 
-| Variable         | Purpose                          | Required | Default        |
-|------------------|----------------------------------|----------|----------------|
-| `GEMINI_API_KEY` | Google Gemini AI API key         | No*      | Falls back to sample data |
-| `APP_URL`        | Deployment URL for the app       | No       | `http://localhost:3000`   |
-| `NODE_ENV`       | Runtime environment              | No       | `development`  |
-| `DISABLE_HMR`    | Disable Vite HMR (AI Studio)    | No       | `false`        |
+| Variable                      | Purpose                                       | Required | Default / Fallback                                     |
+|-------------------------------|-----------------------------------------------|----------|--------------------------------------------------------|
+| `DATABASE_URL`                | PostgreSQL connection URL with pool size      | Yes      | Required for Prisma DB queries                         |
+| `SESSION_SECRET`              | express-session cookie encryption secret      | Yes      | In dev falls back to default dev secret                |
+| `PORT`                        | Server HTTP listening port                    | No       | `3000`                                                 |
+| `NODE_ENV`                    | Runtime environment (`development`/`production`)| No     | `development`                                          |
+| `GEMINI_API_KEY`              | Google Gemini AI API key                      | No*      | Falls back to clinical sample prescription data        |
+| `RESEND_API_KEY`              | Resend transactional email API key            | No*      | Falls back to console log email stub                   |
+| `RESEND_FROM_EMAIL`           | Verified sender email address                 | No       | `onboarding@resend.dev`                                |
+| `VITE_POSTHOG_KEY`            | PostHog project API key                       | No*      | Falls back to console log analytics stub               |
+| `VITE_POSTHOG_HOST`           | PostHog analytics ingestion host              | No       | `https://us.i.posthog.com`                              |
+| `RAZORPAY_KEY_ID`             | Razorpay public merchant key                  | No*      | Falls back to simulated test payment stub              |
+| `RAZORPAY_KEY_SECRET`         | Razorpay secret signature key                 | No*      | Falls back to simulated test payment stub              |
+| `STRIPE_SECRET_KEY`           | Stripe backend secret API key                 | No*      | Falls back to simulated test payment stub              |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe frontend publishable key               | No*      | Falls back to simulated test payment stub              |
+| `APP_URL`                     | Deployment URL for the app                    | No       | `http://localhost:3000`                                |
+| `DISABLE_HMR`                 | Disable Vite HMR (AI Studio sandbox)          | No       | `false`                                                |
 
-\* The app degrades gracefully without an API key, using built-in sample prescriptions.
+\* The app is designed to degrade gracefully in local development: if third-party keys (Gemini, Resend, Razorpay, Stripe, PostHog) are omitted, safe simulation stubs activate without crashing.
 
 ### API Security
 

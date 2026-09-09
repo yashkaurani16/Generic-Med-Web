@@ -1,0 +1,79 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: genericmed-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DATABASE_URL=${DATABASE_URL:-mongodb+srv://yashkaurani_db_user:4TJVd0FjRRa9y9Go@cluster04.zio8msa.mongodb.net/genericmed?retryWrites=true&w=majority&appName=Cluster04}
+      - REDIS_URL=redis://redis:6379
+      - SESSION_SECRET=genericmed_production_secure_session_secret_2026
+      - APP_URL=http://localhost:5173
+      - CORS_ORIGIN=http://localhost:5173
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - genericmed-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: genericmed-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - genericmed-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: genericmed-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: genericmed
+      POSTGRES_PASSWORD: secure_password_2026
+      POSTGRES_DB: genericmed_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U genericmed -d genericmed_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - genericmed-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: genericmed-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - genericmed-net
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  genericmed-net:
+    driver: bridge

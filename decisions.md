@@ -481,6 +481,250 @@ Decompose server into modular Express routers under `src/api/`, each responsible
 **Impact on Project:**
 New `src/api/` directory with 9 route modules + 4 middleware files. Old inline routes in `server.ts` removed.
 
+### DEC-012: Resend for Transactional Email Delivery
+
+| Field                | Detail |
+|----------------------|--------|
+| **Date**             | 2026-09-09 |
+| **Status**           | ✅ Accepted |
+| **Decision Maker**   | Yash Kaurani |
+
+**Context / Problem:**
+Patients and pharmacies need timely email notifications for order confirmations, prescription acceptance/rejection, dispatch updates, and account registration.
+
+**Decision:**
+Use **Resend** as the transactional email provider with a developer-friendly stub fallback when `RESEND_API_KEY` is not present in local environments.
+
+**Reasoning:**
+- Modern, clean TypeScript SDK with first-class DX.
+- Generous free tier (3,000 emails/month, 100/day).
+- Clean HTML templates with branded design and responsive tables.
+- Dev stub prevents runtime crashes when keys are omitted.
+
+**Impact on Project:**
+`src/lib/email.ts`, `src/api/emails.ts`, hooks into `orders.ts`, `prescriptions.ts`, and `auth.ts`.
+
+---
+
+### DEC-013: react-i18next for Multi-Language Localization
+
+| Field                | Detail |
+|----------------------|--------|
+| **Date**             | 2026-09-09 |
+| **Status**           | ✅ Accepted |
+| **Decision Maker**   | Yash Kaurani |
+
+**Context / Problem:**
+India has 22 scheduled languages. For wide healthcare adoption, generic medicine comparison must be accessible in regional languages starting with Hindi, Tamil, and Telugu alongside English.
+
+**Decision:**
+Use **react-i18next** with `i18next-browser-languagedetector` and JSON locale bundles for English, Hindi, Tamil, and Telugu.
+
+**Reasoning:**
+- Industry-standard React i18n ecosystem with fast bundle sizes.
+- Automatic browser language detection with persistent user choice via `localStorage`.
+- Support for interpolation, pluralization, and namespace organization.
+
+**Impact on Project:**
+`src/i18n/`, `src/i18n/locales/{en,hi,ta,te}/common.json`, `Header.tsx` language dropdown selector.
+
+---
+
+### DEC-014: Progressive Web App (PWA) Strategy
+
+| Field                | Detail |
+|----------------------|--------|
+| **Date**             | 2026-09-09 |
+| **Status**           | ✅ Accepted |
+| **Decision Maker**   | Yash Kaurani |
+
+**Context / Problem:**
+Patients need quick access on mobile devices without the overhead of publishing separate native iOS/Android apps to app stores in Phase 3.
+
+**Decision:**
+Adopt a **Progressive Web App (PWA)** strategy using `vite-plugin-pwa`, `public/manifest.json`, and custom service worker (`public/sw.js`).
+
+**Reasoning:**
+- Single codebase for web, Android, and iOS.
+- "Add to Home Screen" installable prompt with standalone window.
+- Offline support via stale-while-revalidate for static assets and network-first for APIs.
+- Zero app store fees, instant deployment of updates.
+
+**Impact on Project:**
+`public/manifest.json`, `public/sw.js`, `public/icon.svg`, `index.html`, `vite.config.ts`.
+
+---
+
+### DEC-015: PostHog for Product Analytics and User Insights
+
+| Field                | Detail |
+|----------------------|--------|
+| **Date**             | 2026-09-09 |
+| **Status**           | ✅ Accepted |
+| **Decision Maker**   | Yash Kaurani |
+
+**Context / Problem:**
+Understanding user conversion funnels (search → price comparison → cart → prescription upload → order completion) is essential for product growth.
+
+**Decision:**
+Integrate **PostHog** (`posthog-js`) with client-side event tracking, user identification, and server-side aggregation for admin business intelligence charts.
+
+**Reasoning:**
+- Open-source, privacy-friendly, self-hostable product analytics with session replay.
+- Simple client wrapper with dev stub mode when `VITE_POSTHOG_KEY` is not set.
+- Server-side BI aggregation endpoints (`/api/analytics/*`) feed the interactive Admin Recharts dashboard.
+
+**Impact on Project:**
+`src/lib/analytics.ts`, `src/main.tsx`, `src/api/analytics.ts`, `AdminDashboardView.tsx`.
+
+---
+
+### DEC-016: Service Layer Decomposition & Event-Driven Architecture
+
+| Field                | Detail |
+|----------------------|--------|
+| **Date**             | 2026-09-09 |
+| **Status**           | ✅ Accepted |
+| **Decision Maker**   | Yash Kaurani |
+
+**Context / Problem:**
+As business logic expanded (escrow holding, 3PL dispatch, automated emails, stock reservation), controller functions in `src/api/` risked becoming tightly coupled monoliths.
+
+**Decision:**
+Decompose business logic into dedicated service classes under `src/services/` (`CatalogService`, `OrderService`, `MarketplaceService`, `LogisticsService`, `ComplianceService`) and orchestrate asynchronous domain side-effects using a typed in-process event bus (`src/lib/eventBus.ts`).
+
+**Reasoning:**
+- Decouples HTTP route validation from core domain business rules.
+- Enables asynchronous execution of non-blocking side effects (emails, webhooks, audit logging, escrow holding).
+- Event bus architecture can easily transition to Redis PubSub or RabbitMQ for multi-instance scaling.
+
+**Impact on Project:**
+`src/services/`, `src/lib/eventBus.ts`, `src/api/orders.ts`, `src/api/settlements.ts`.
+
+---
+
+### DEC-017: Multi-Stage Containerization with Docker & Compose Orchestration
+
+| Field                | Detail |
+|----------------------|--------|
+| **Date**             | 2026-09-09 |
+| **Status**           | ✅ Accepted |
+| **Decision Maker**   | Yash Kaurani |
+
+**Context / Problem:**
+Deploying to production and cloud environments requires reproducible, isolated, and scalable environments encompassing Node.js, PostgreSQL, and Redis caching.
+
+**Decision:**
+Create an optimized multi-stage `Dockerfile` (dependencies → builder → runner) based on `node:22-alpine` with non-root user execution, paired with `docker-compose.yml` for unified local, staging, and enterprise deployment.
+
+**Reasoning:**
+- Multi-stage build minimizes final image size by discarding TypeScript build toolchains and source files.
+- Non-root user adheres to enterprise container security benchmarks.
+- Compose setup provides instant full-stack spin-up including health checks and persistent volumes.
+
+**Impact on Project:**
+`Dockerfile`, `docker-compose.yml`, `.dockerignore`.
+
+---
+
+### DEC-018: Tiered Marketplace Monetization, Escrow, and Payout Ledger
+
+| Field                | Detail |
+|----------------------|--------|
+| **Date**             | 2026-09-09 |
+| **Status**           | ✅ Accepted |
+| **Decision Maker**   | Yash Kaurani |
+
+**Context / Problem:**
+genericMed connects patients with third-party pharmacies. A scalable monetization model is required that provides fair commission rates, protects patient payments, and incentivizes high-SLA pharmacy partners.
+
+**Decision:**
+Implement a 3-tier subscription model (`Basic`: 8%, `Verified`: 5%, `Enterprise`: 3%) combined with an automated escrow release mechanism that holds customer funds until orders transition to `Delivered`.
+
+**Reasoning:**
+- Tiered commission incentivizes pharmacies to improve fulfillment SLAs and maintain verified CDSCO status.
+- Escrow holding prevents payment fraud and eliminates refund disputes.
+- Itemized payout ledger provides transparency for pharmacy partners and platform administrators.
+
+**Impact on Project:**
+`src/services/marketplaceService.ts`, `src/api/settlements.ts`, `src/components/AdminDashboardView.tsx`.
+
+---
+
+### DEC-019: Multi-Carrier 3PL Logistics & Live Driver GPS Tracking
+
+| Field                | Detail |
+|----------------------|--------|
+| **Date**             | 2026-09-09 |
+| **Status**           | ✅ Accepted |
+| **Decision Maker**   | Yash Kaurani |
+
+**Context / Problem:**
+Patients purchasing urgent medications require accurate delivery ETAs and visibility into courier transit, including temperature-sensitive handling for certain drugs.
+
+**Decision:**
+Create a unified 3PL logistics provider adapter supporting Dunzo Express (2-hr hyperlocal), Shiprocket (intercity), and Shadowfax (cold-chain), accompanied by real-time driver GPS tracking modal with interactive route waypoints and carrier webhook integration.
+
+**Reasoning:**
+- Single unified API abstracts away individual carrier integration differences.
+- Live GPS tracking modal increases patient trust and reduces support tickets.
+- Cold-chain routing ensures compliance for insulin and temperature-sensitive biologics.
+
+**Impact on Project:**
+`src/lib/logistics.ts`, `src/services/logisticsService.ts`, `src/api/logistics.ts`, `src/components/DeliveryTrackingModal.tsx`, `src/components/OrderTrackingView.tsx`.
+
+---
+
+### DEC-020: DISHA & HIPAA Healthcare Compliance Architecture
+
+| Field                | Detail |
+|----------------------|--------|
+| **Date**             | 2026-09-09 |
+| **Status**           | ✅ Accepted |
+| **Decision Maker**   | Yash Kaurani |
+
+**Context / Problem:**
+Operating a prescription and pharmacy platform in India and globally mandates compliance with healthcare data protection standards (DISHA, HIPAA, and GDPR patient privacy).
+
+**Decision:**
+Implement automated regulatory compliance reporting, CDSCO pharmacy drug license validation, k-anonymized research dataset extraction, and an automated patient right-to-erasure workflow with cryptographic erasure tokens.
+
+**Reasoning:**
+- Regulatory compliance readiness is mandatory before hospital and enterprise pharmacy onboarding.
+- CDSCO license verification ensures only legal, licensed chemists dispense prescription drugs.
+- De-identified data sharing unlocks valuable public health insights while safeguarding patient anonymity.
+
+**Impact on Project:**
+`backend/src/lib/compliance.ts`, `backend/src/services/complianceService.ts`, `backend/src/api/compliance.ts`.
+
+---
+
+### DEC-021: Decoupled Frontend & Backend Monorepo Architecture
+
+| Field                | Detail |
+|----------------------|--------|
+| **Date**             | 2026-09-09 |
+| **Status**           | ✅ Accepted |
+| **Decision Maker**   | Yash Kaurani |
+
+**Context / Problem:**
+The original repository was a hybrid monolithic project where frontend React code and Express server code resided in the same root package. Dependencies, type configurations, and build scripts were intermixed, making deployment and independent scaling difficult.
+
+**Decision:**
+Completely separate the repository into two independent subfolders:
+1. `backend/`: Standalone Node.js/Express API server listening on port 5000, managing PostgreSQL via Prisma, session cookies, and business services.
+2. `frontend/`: Standalone React 19 + Vite 6 client listening on port 5173, with Vite reverse proxy forwarding `/api` calls to port 5000 in dev.
+3. Root `package.json`: Lightweight workspace orchestrator using `concurrently` to run both services together or separately.
+
+**Reasoning:**
+- Independent dependency trees eliminate client bundle bloat and backend-only dependency pollution.
+- Standardized microservice deployment patterns with separate Dockerfiles for API and static Nginx.
+- Enables frontend and backend to be deployed to separate hosts (e.g., Vercel/Netlify for frontend and AWS/Render/Fly for backend) without architectural changes.
+- Eliminates cross-boundary code coupling while preserving a frictionless local development experience through Vite proxying.
+
+**Impact on Project:**
+`frontend/`, `backend/`, `package.json`, `README.md`, `docker-compose.yml`.
+
 ---
 
 ## Superseded Decisions

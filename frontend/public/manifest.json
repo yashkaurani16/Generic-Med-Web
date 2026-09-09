@@ -1,0 +1,29 @@
+{
+  "short_name": "genericMed",
+  "name": "genericMed — Generic Medicine Marketplace",
+  "description": "Compare medicine prices across verified pharmacies with prescription verification.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#09090b",
+  "theme_color": "#10b981",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/"
+}

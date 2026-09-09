@@ -1,0 +1,59 @@
+{
+  "nav": {
+    "compare": "Compare Medicines",
+    "prescriptions": "Prescription Vault",
+    "orders": "Track Orders",
+    "medical_history": "Medical History",
+    "pharmacy_profile": "Partner Pharmacies",
+    "pharmacy_orders": "Fulfillment Queue",
+    "pharmacy_rx": "Prescription Review",
+    "pharmacy_inventory": "Inventory & Prices",
+    "admin_dashboard": "Operations Dashboard",
+    "admin_audit": "Immutable Audit Log",
+    "admin_catalog": "Catalog Normalization",
+    "doctor_prescribe": "Prescriber Portal",
+    "architecture": "Architecture & PRD",
+    "cart": "Cart",
+    "login": "Sign In",
+    "register": "Register",
+    "logout": "Log Out"
+  },
+  "hero": {
+    "title": "Compare verified seller prices for identical medicine packs.",
+    "subtitle": "Save up to 85% by matching brand names to authorized generic equivalents with pack size normalization.",
+    "searchPlaceholder": "Search by brand, generic, or therapeutic class...",
+    "uploadPrescription": "Upload Prescription for Auto-Match",
+    "priceTrends": "Price Trends Chart",
+    "howCalculated": "How Lowest Price is Calculated"
+  },
+  "cart": {
+    "title": "Your Cart",
+    "empty": "Your cart is empty",
+    "emptySubtitle": "Compare prices across partner pharmacies to find the lowest cost for your medications.",
+    "explore": "Explore Medicines",
+    "subtotal": "Subtotal",
+    "delivery": "Delivery Fee",
+    "tax": "Healthcare Tax (5% GST)",
+    "total": "Total Payable",
+    "savings": "Total Savings vs. Brand Name MRP",
+    "proceedToShipping": "Proceed to Delivery & Verification",
+    "backToCart": "Back to Cart",
+    "continueToPayment": "Continue to Payment",
+    "placeOrder": "Pay & Place Order",
+    "rxRequired": "Rx Required",
+    "otc": "OTC Item"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "success": "Success",
+    "error": "Error",
+    "search": "Search",
+    "filter": "Filter",
+    "status": "Status",
+    "actions": "Actions"
+  }
+}
